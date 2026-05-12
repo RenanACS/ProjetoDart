@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 class TransferenciaScreen extends StatefulWidget {
   final double saldo;
@@ -91,18 +92,90 @@ class _TransferenciaScreenState extends State<TransferenciaScreen> {
 
     if (!mounted) return;
 
-    Navigator.pop(context, {
-      'sucesso': true,
-      'valor': double.parse(_valorCtrl.text.replaceAll(',', '.')),
-      'destinatario': _destinCtrl.text,
-    });
+    final valor = double.parse(_valorCtrl.text.replaceAll(',', '.'));
+    final destinatario = _destinCtrl.text;
+    final descricao = _descricaoCtrl.text;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Transferência realizada com sucesso! ✅'),
-        backgroundColor: verde,
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: verde, size: 28),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Transferência realizada!',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _linhaResumo('Para', destinatario),
+            const SizedBox(height: 8),
+            _linhaResumo('Valor', 'R\$ ${valor.toStringAsFixed(2)}'),
+            if (descricao.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _linhaResumo('Descrição', descricao),
+            ],
+          ],
+        ),
+        actions: [
+          OutlinedButton.icon(
+            onPressed: () => _compartilharComprovante(destinatario, valor, descricao),
+            icon: const Icon(Icons.share, color: azul),
+            label: const Text('Compartilhar', style: TextStyle(color: azul)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: azul),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: azul,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Concluir'),
+          ),
+        ],
       ),
     );
+
+    if (!mounted) return;
+
+    Navigator.pop(context, {
+      'sucesso': true,
+      'valor': valor,
+      'destinatario': destinatario,
+    });
+  }
+
+  void _compartilharComprovante(String destinatario, double valor, String descricao) {
+    final agora = DateTime.now();
+    final data =
+        '${agora.day.toString().padLeft(2, '0')}/${agora.month.toString().padLeft(2, '0')}/${agora.year} '
+        '${agora.hour.toString().padLeft(2, '0')}:${agora.minute.toString().padLeft(2, '0')}';
+
+    final texto = 'Comprovante de Transferência - NR BanK\n'
+        'Para: $destinatario\n'
+        'Valor: R\$ ${valor.toStringAsFixed(2)}\n'
+        '${descricao.isNotEmpty ? 'Descrição: $descricao\n' : ''}'
+        'Data: $data';
+
+    SharePlus.instance.share(ShareParams(text: texto));
   }
 
   Widget _linhaResumo(String label, String valor) {

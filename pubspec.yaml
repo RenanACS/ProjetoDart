@@ -8,9 +8,13 @@ environment:
   sdk: ^3.0.0
 
 dependencies:
-  flutter:
-    sdk: flutter
-  http: ^1.2.0
+    flutter:
+      sdk: flutter
+    http: ^1.2.0
+    image_picker: ^1.1.2
+    local_auth: ^2.3.0
+    share_plus: ^11.0.0
+
 
 dev_dependencies:
   flutter_test:

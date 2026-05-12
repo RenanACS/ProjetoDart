@@ -54,13 +54,13 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
   final String _apiUrl =
       'https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,GBP-BRL,BTC-BRL';
 
-  static const Color bgPrimary    = Colors.white;
-  static const Color bgCard       = Color(0xFFF1F5F9);
-  static const Color azul         = Color(0xFF2563EB);
+  static const Color bgPrimary = Colors.white;
+  static const Color bgCard = Color(0xFFF1F5F9);
+  static const Color azul = Color(0xFF2563EB);
   static const Color textoPrimary = Colors.black;
-  static const Color textoSecond  = Color(0xFF94A3B8);
-  static const Color verde        = Color(0xFF22C55E);
-  static const Color vermelho     = Color(0xFFEF4444);
+  static const Color textoSecond = Color(0xFF94A3B8);
+  static const Color verde = Color(0xFF22C55E);
+  static const Color vermelho = Color(0xFFEF4444);
 
   @override
   void initState() {
@@ -157,8 +157,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: azul,
               foregroundColor: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -224,8 +223,8 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.attach_money, color: Colors.white70, size: 18),
               SizedBox(width: 6),
               Text(

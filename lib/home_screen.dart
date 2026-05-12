@@ -1,7 +1,70 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  XFile? _fotoPerfil;
+  final _picker = ImagePicker();
+
+  Future<void> _selecionarFoto(ImageSource source) async {
+    final foto = await _picker.pickImage(source: source, imageQuality: 80);
+    if (foto != null) setState(() => _fotoPerfil = foto);
+  }
+
+  void _mostrarOpcoesFoto() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFF94A3B8),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Foto de perfil',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Color(0xFF2563EB)),
+              title: const Text('Câmera'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _selecionarFoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Color(0xFF2563EB)),
+              title: const Text('Galeria'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _selecionarFoto(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,12 +82,20 @@ class HomeScreen extends StatelessWidget {
             fontSize: 24,
           ),
         ),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: Color(0xFF2563EB),
-              child: Icon(Icons.person, color: Colors.white),
+            padding: const EdgeInsets.only(right: 16),
+            child: GestureDetector(
+              onTap: _mostrarOpcoesFoto,
+              child: CircleAvatar(
+                backgroundColor: const Color(0xFF2563EB),
+                backgroundImage: _fotoPerfil != null
+                    ? FileImage(File(_fotoPerfil!.path))
+                    : null,
+                child: _fotoPerfil == null
+                    ? const Icon(Icons.person, color: Colors.white)
+                    : null,
+              ),
             ),
           ),
         ],
@@ -69,9 +140,9 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
+                      children: [
                         Text(
                           'Saldo disponível',
                           style: TextStyle(color: Colors.white70, fontSize: 16),
@@ -92,10 +163,10 @@ class HomeScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        actionButton(context, Icons.pix,               'Pix',       null),
-                        actionButton(context, Icons.qr_code,           'Boleto',    null),
-                        actionButton(context, Icons.send,              'Transferir','/transferencia'),
-                        actionButton(context, Icons.currency_exchange, 'Cotação',   '/cotacao'),
+                        _actionButton(context, Icons.pix, 'Pix', null),
+                        _actionButton(context, Icons.qr_code, 'Boleto', null),
+                        _actionButton(context, Icons.send, 'Transferir', '/transferencia'),
+                        _actionButton(context, Icons.currency_exchange, 'Cotação', '/cotacao'),
                       ],
                     ),
                   ],
@@ -111,7 +182,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              transactionCard(
+              _transactionCard(
                 'PIX recebido',
                 'Hoje • 10:30',
                 '+ R\$ 400,00',
@@ -119,7 +190,7 @@ class HomeScreen extends StatelessWidget {
                 const Color(0xFF22C55E),
               ),
               const SizedBox(height: 16),
-              transactionCard(
+              _transactionCard(
                 'Pagamento boleto',
                 'Hoje • 09:15',
                 '- R\$ 120,00',
@@ -127,7 +198,7 @@ class HomeScreen extends StatelessWidget {
                 const Color(0xFFEF4444),
               ),
               const SizedBox(height: 16),
-              transactionCard(
+              _transactionCard(
                 'Transferência enviada',
                 'Ontem • 18:00',
                 '- R\$ 80,00',
@@ -144,16 +215,16 @@ class HomeScreen extends StatelessWidget {
         unselectedItemColor: const Color(0xFF94A3B8),
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home),        label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.credit_card), label: 'Cartões'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart),   label: 'Invest.'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings),    label: 'Config.'),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Invest.'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Config.'),
         ],
       ),
     );
   }
 
-  Widget actionButton(BuildContext context, IconData icon, String text, String? rota) {
+  Widget _actionButton(BuildContext context, IconData icon, String text, String? rota) {
     return GestureDetector(
       onTap: rota == null
           ? null
@@ -188,7 +259,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget transactionCard(
+  Widget _transactionCard(
     String title,
     String date,
     String value,
