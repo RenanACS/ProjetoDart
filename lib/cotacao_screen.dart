@@ -20,15 +20,25 @@ class Cotacao {
   factory Cotacao.fromJson(String codigo, Map<String, dynamic> json) {
     return Cotacao(
       codigo: codigo,
-      nome: json['name'] ?? codigo,
-      simbolo: _getSimboloMoeda(codigo),
+      nome: _getNome(codigo),
+      simbolo: _getSimbolo(codigo),
       valor: double.tryParse(json['bid'] ?? '0') ?? 0,
       variacao: double.tryParse(json['pctChange'] ?? '0') ?? 0,
     );
   }
 
-  static String _getSimboloMoeda(String codigo) {
-    const Map<String, String> simbolos = {
+  static String _getNome(String codigo) {
+    const nomes = {
+      'USDBRL': 'Dólar Americano',
+      'EURBRL': 'Euro',
+      'GBPBRL': 'Libra Esterlina',
+      'BTCBRL': 'Bitcoin',
+    };
+    return nomes[codigo] ?? codigo;
+  }
+
+  static String _getSimbolo(String codigo) {
+    const simbolos = {
       'USDBRL': '\$',
       'EURBRL': '€',
       'GBPBRL': '£',
@@ -54,18 +64,27 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
   final String _apiUrl =
       'https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,GBP-BRL,BTC-BRL';
 
-  static const Color bgPrimary = Colors.white;
-  static const Color bgCard = Color(0xFFF1F5F9);
-  static const Color azul = Color(0xFF2563EB);
+  final TextEditingController _calcCtrl = TextEditingController();
+  List<Map<String, String>> _resultados = [];
+
+  static const Color bgPrimary    = Colors.white;
+  static const Color bgCard       = Color(0xFFF1F5F9);
+  static const Color azul         = Color(0xFF2563EB);
   static const Color textoPrimary = Colors.black;
-  static const Color textoSecond = Color(0xFF94A3B8);
-  static const Color verde = Color(0xFF22C55E);
-  static const Color vermelho = Color(0xFFEF4444);
+  static const Color textoSecond  = Color(0xFF94A3B8);
+  static const Color verde        = Color(0xFF22C55E);
+  static const Color vermelho     = Color(0xFFEF4444);
 
   @override
   void initState() {
     super.initState();
     _buscarCotacoes();
+  }
+
+  @override
+  void dispose() {
+    _calcCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _buscarCotacoes() async {
@@ -98,6 +117,31 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _converter() {
+    final double? reais = double.tryParse(_calcCtrl.text.replaceAll(',', '.'));
+    if (reais == null || reais <= 0 || _cotacoes.isEmpty) return;
+
+    final resultados = <Map<String, String>>[];
+
+    for (final cotacao in _cotacoes) {
+      final double convertido = reais / cotacao.valor;
+      final String valorFormatado = cotacao.codigo == 'BTCBRL'
+          ? convertido.toStringAsFixed(8)
+          : convertido.toStringAsFixed(2);
+
+      resultados.add({
+        'simbolo': cotacao.simbolo,
+        'nome': cotacao.nome,
+        'codigo': cotacao.codigo,
+        'valor': '${cotacao.simbolo} $valorFormatado',
+      });
+    }
+
+    setState(() {
+      _resultados = resultados;
+    });
   }
 
   String _formatarHora(DateTime dt) {
@@ -176,10 +220,24 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          _buildConversorBanner(),
+
+          const SizedBox(height: 16),
+
+          // resultado da conversão
+          if (_resultados.isNotEmpty) ...[
+            _buildResultadosConversor(),
+            const SizedBox(height: 24),
+          ],
+
+          // banner do dolar
           if (_cotacoes.isNotEmpty) _buildBannerDestaque(_cotacoes.first),
+
           const SizedBox(height: 24),
+
+          // cotações do dia
           const Text(
-            'Todas as cotações',
+            'Cotações do dia',
             style: TextStyle(
               color: textoPrimary,
               fontSize: 22,
@@ -194,9 +252,177 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
             style: const TextStyle(color: textoSecond, fontSize: 13),
           ),
           const SizedBox(height: 16),
+
           ..._cotacoes.map((c) => _buildCotacaoCard(c)),
+
+          const SizedBox(height: 20),
         ],
       ),
+    );
+  }
+
+  // conversor de moedas
+  Widget _buildConversorBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabeçalho
+          const Row(
+            children: [
+              Icon(Icons.currency_exchange, color: Colors.white70, size: 18),
+              SizedBox(width: 6),
+              Text(
+                'Conversor de Moedas',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // escrever valor
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: TextField(
+              controller: _calcCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+              decoration: const InputDecoration(
+                hintText: '0,00',
+                hintStyle: TextStyle(color: Colors.white38, fontSize: 22),
+                prefixText: 'R\$ ',
+                prefixStyle: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                border: InputBorder.none,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              cursorColor: Colors.white,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // btn converter
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _converter,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: azul,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Converter',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // resultado das cotações
+  Widget _buildResultadosConversor() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Resultado da conversão',
+          style: TextStyle(
+            color: textoPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._resultados.map(
+          (r) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: bgCard,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: azul.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Center(
+                    child: Text(
+                      r['simbolo']!,
+                      style: const TextStyle(
+                        color: azul,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    r['nome']!,
+                    style: const TextStyle(
+                      color: textoPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  r['valor']!,
+                  style: const TextStyle(
+                    color: azul,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -223,8 +449,8 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
+          Row(
+            children: const [
               Icon(Icons.attach_money, color: Colors.white70, size: 18),
               SizedBox(width: 6),
               Text(
@@ -299,7 +525,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                 cotacao.simbolo,
                 style: const TextStyle(
                   color: azul,
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -311,7 +537,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  cotacao.codigo.replaceAll('BRL', ''),
+                  cotacao.nome,
                   style: const TextStyle(
                     color: textoPrimary,
                     fontSize: 16,
@@ -320,7 +546,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  cotacao.nome,
+                  'R\$ ${cotacao.valor.toStringAsFixed(2)} por ${cotacao.simbolo}1',
                   style: const TextStyle(color: textoSecond, fontSize: 13),
                 ),
               ],
@@ -329,15 +555,6 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                'R\$ ${cotacao.valor.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  color: textoPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -350,7 +567,7 @@ class _CotacaoScreenState extends State<CotacaoScreen> {
                     '${cotacao.variacao.abs().toStringAsFixed(2)}%',
                     style: TextStyle(
                       color: cor,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
